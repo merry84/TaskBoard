@@ -1,0 +1,52 @@
+name: Build and deploy TaskBoard App
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore TaskBoard.WebApp/TaskBoard.WebApp.csproj
+
+      - name: Build
+        run: dotnet build TaskBoard.WebApp/TaskBoard.WebApp.csproj --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish TaskBoard.WebApp/TaskBoard.WebApp.csproj --configuration Release --output ./publish
+
+      - name: Upload artifact for deployment
+        uses: actions/upload-artifact@v4
+        with:
+          name: taskboard-app
+          path: ./publish
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: taskboard-app
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'taskboard-app-84153'   # ← ТОВА Е ИМЕТО НА ТВОЯ WEB APP
+          package: .
+          publish-profile: ${{ secrets.AZUREAPPPUBLISHPROFILE }}
